@@ -78,6 +78,18 @@
                     </div>
                 </div>
             </section>
+
+            <section class="panel-seccion">
+                <h2>Reportes</h2>
+                <button type="button" class="btn-pdf" id="btnGenerarPDF" title="Descargar PDF de los reportes ciudadanos">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="7 10 12 15 17 10"/>
+                        <line x1="12" y1="15" x2="12" y2="3"/>
+                    </svg>
+                    <span>Generar PDF</span>
+                </button>
+            </section>
         </aside>
 
         <main id="map"></main>
@@ -144,6 +156,8 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <!-- proj4 para reproyección de coordenadas -->
 <script src="https://unpkg.com/proj4@2.11.0/dist/proj4.js"></script>
+<!-- jsPDF para exportar reportes a PDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <!-- Lógica del geoportal -->
 <script src="js/app.js?v=5.0"></script>
 

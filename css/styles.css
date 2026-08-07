@@ -474,6 +474,31 @@ body {
 .aviso.exito { display: block; background: #f0fdf4; border: 1px solid #bbf7d0; color: var(--verde); }
 .aviso.error { display: block; background: #fef2f2; border: 1px solid #fecaca; color: var(--rojo); }
 
+/* ====== Botón generar PDF ====== */
+.btn-pdf {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: linear-gradient(120deg, var(--azul-500), var(--azul-700));
+    color: #fff;
+    border: none;
+    font-family: inherit;
+    font-size: 13.5px;
+    font-weight: 700;
+    padding: 11px 14px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: opacity 0.15s ease, transform 0.1s ease;
+}
+
+.btn-pdf:hover { opacity: 0.92; }
+.btn-pdf:active { transform: translateY(1px); }
+.btn-pdf:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.btn-pdf svg { width: 17px; height: 17px; flex-shrink: 0; }
+
 /* ====== Pie de página con créditos ====== */
 .creditos {
     text-align: center;

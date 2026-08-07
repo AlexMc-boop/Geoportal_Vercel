@@ -68,6 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
   construirPanelLeyenda();
   cargarCapas();
   configurarEventosReporte();
+  configurarBotonPDF();
 });
 
 function inicializarMapa() {
@@ -373,4 +374,121 @@ function mostrarAviso(el, mensaje, tipo) {
   if (!el) return;
   el.textContent = mensaje;
   el.className = `aviso ${tipo}`;
+}
+
+/* ==========================================================================
+   GENERAR PDF DE REPORTES
+   ========================================================================== */
+function configurarBotonPDF() {
+  const btn = document.getElementById('btnGenerarPDF');
+  if (!btn) return;
+  const etiqueta = btn.querySelector('span');
+
+  btn.addEventListener('click', async () => {
+    if (btn.disabled) return;
+    btn.disabled = true;
+    if (etiqueta) etiqueta.textContent = 'Generando…';
+
+    try {
+      await generarPDFReportes();
+    } catch (err) {
+      console.error('Error generando PDF:', err);
+      alert('No se pudo generar el PDF. Intenta de nuevo.');
+    } finally {
+      btn.disabled = false;
+      if (etiqueta) etiqueta.textContent = 'Generar PDF';
+    }
+  });
+}
+
+async function generarPDFReportes() {
+  const respuesta = await fetch('/api/reportes');
+  if (!respuesta.ok) throw new Error('HTTP ' + respuesta.status);
+  const datos = await respuesta.json();
+  const lista = Array.isArray(datos) ? datos : [];
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+
+  const margenX = 14;
+  const anchoTexto = 182;
+  const limiteY = 283;
+  const camposOcultos = ['geom', 'geometry', 'geojson'];
+
+  let y = 0;
+
+  // Encabezado
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(16);
+  doc.setTextColor(11, 31, 78);
+  doc.text('Reportes Ciudadanos', margenX, 16);
+  y = 23;
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  doc.setTextColor(110, 110, 110);
+  doc.text('Geoportal del Barrio · UTPL 2026 · Especialidad SIG', margenX, y); y += 5;
+  doc.text('Fecha de generación: ' + new Date().toLocaleString('es-EC', { timeZone: 'America/Guayaquil' }), margenX, y); y += 5;
+  doc.text('Total de reportes: ' + lista.length, margenX, y); y += 4;
+
+  doc.setDrawColor(200, 205, 215);
+  doc.setLineWidth(0.4);
+  doc.line(margenX, y, 210 - margenX, y);
+  y += 8;
+
+  if (lista.length === 0) {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(12);
+    doc.setTextColor(120, 120, 120);
+    doc.text('No hay reportes registrados.', margenX, y);
+  } else {
+    lista.forEach((reporte, idx) => {
+      const bloques = [];
+
+      bloques.push({ tipo: 'titulo', texto: 'Reporte #' + (idx + 1) });
+
+      Object.keys(reporte).forEach(k => {
+        if (camposOcultos.includes(k)) return;
+        let v = reporte[k];
+        if (v === null || v === undefined || v === '') v = '—';
+        const etiqueta = k.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+        const lineas = doc.splitTextToSize(etiqueta + ': ' + v, anchoTexto);
+        bloques.push({ tipo: 'campo', lineas });
+      });
+
+      const altoBloque = bloques.reduce((acc, b) => {
+        if (b.tipo === 'titulo') return acc + 8;
+        return acc + b.lineas.length * 5;
+      }, 0);
+
+      if (y + altoBloque > limiteY) {
+        doc.addPage();
+        y = 16;
+      }
+
+      bloques.forEach(b => {
+        if (b.tipo === 'titulo') {
+          if (y > limiteY - 4) { doc.addPage(); y = 16; }
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(12);
+          doc.setTextColor(11, 31, 78);
+          doc.text(b.texto, margenX, y);
+          y += 8;
+        } else {
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(9.5);
+          doc.setTextColor(60, 60, 60);
+          b.lineas.forEach(linea => {
+            if (y > limiteY - 4) { doc.addPage(); y = 16; }
+            doc.text(linea, margenX, y);
+            y += 5;
+          });
+        }
+      });
+
+      y += 4;
+    });
+  }
+
+  doc.save('reportes_ciudadanos_' + new Date().toISOString().slice(0, 10) + '.pdf');
 }
