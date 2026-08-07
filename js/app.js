@@ -42,6 +42,13 @@ const CAPAS = [
     color: '#2ecc71'
   },
   {
+    tabla: 'poblado_p',
+    nombre: 'Poblados',
+    tipo: 'punto',
+    srid: 32717,
+    color: '#0d6efd'
+  },
+  {
     tabla: 'reportes_ciudadanos',
     nombre: 'Reportes Ciudadanos',
     tipo: 'punto',
