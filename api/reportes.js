@@ -1,8 +1,9 @@
 /* ============================================================
    Función serverless (Vercel): reportes ciudadanos
    Las credenciales se leen SOLO desde variables de entorno.
-   GET  /api/reportes   -> lista de reportes
-   POST /api/reportes   -> guarda un nuevo reporte
+   GET   /api/reportes        -> lista de reportes
+   POST  /api/reportes        -> guarda un nuevo reporte
+   PATCH /api/reportes        -> actualiza el estado de un reporte
    ============================================================ */
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
@@ -20,10 +21,11 @@ const CAMPOS_PERMITIDOS = [
   'latitude',
   'longitude'
 ];
+const ESTADOS_VALIDOS = ['pendiente', 'trabajando', 'completado'];
 
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
   if (req.method === 'OPTIONS') {
@@ -88,6 +90,51 @@ module.exports = async function handler(req, res) {
     } catch (err) {
       console.error('Error guardando reporte:', err);
       res.status(502).json({ error: 'Error al guardar el reporte' });
+    }
+    return;
+  }
+
+  if (req.method === 'PATCH') {
+    try {
+      const body = (typeof req.body === 'object' && req.body) ? req.body : {};
+      const id = Number(body.id);
+      const estado = body.estado;
+
+      if (!Number.isInteger(id) || id <= 0) {
+        res.status(400).json({ error: 'id inválido' });
+        return;
+      }
+      if (!estado || !ESTADOS_VALIDOS.includes(estado)) {
+        res.status(400).json({ error: 'estado inválido' });
+        return;
+      }
+
+      const resp = await fetch(`${restUrl}?id=eq.${id}`, {
+        method: 'PATCH',
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+          Prefer: 'return=representation'
+        },
+        body: JSON.stringify({ estado })
+      });
+
+      if (resp.ok) {
+        const actualizado = await resp.json();
+        if (Array.isArray(actualizado) && actualizado.length > 0) {
+          res.status(200).json({ ok: true, reporte: actualizado[0] });
+        } else {
+          res.status(404).json({ error: 'Reporte no encontrado' });
+        }
+      } else {
+        const texto = await resp.text();
+        console.error('Supabase rechazó la actualización:', texto);
+        res.status(resp.status).json({ error: texto });
+      }
+    } catch (err) {
+      console.error('Error actualizando reporte:', err);
+      res.status(502).json({ error: 'Error al actualizar el reporte' });
     }
     return;
   }

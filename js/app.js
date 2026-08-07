@@ -68,6 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
   construirPanelLeyenda();
   cargarCapas();
   configurarEventosReporte();
+  configurarEstadosReportes();
   configurarBotonPDF();
 });
 
@@ -262,16 +263,23 @@ function renderizarCapa(capaConfig, geojson) {
       return L.marker(latlng);
     },
     onEachFeature: (feature, layer) => {
-      let popup = `<b>${capaConfig.nombre}</b><hr style="margin: 4px 0;">`;
-      Object.keys(feature.properties).forEach(k => {
-        if (!k.startsWith('_') && k !== 'geom' && k !== 'geometry' && k !== 'geojson') {
-          popup += `<br><b>${k}:</b> ${feature.properties[k] ?? 'N/A'}`;
-        }
-      });
-      layer.bindPopup(popup);
+      if (capaConfig.tabla === 'reportes_ciudadanos') {
+        layer.bindPopup(generarPopupReporte(feature));
+      } else {
+        let popup = `<b>${capaConfig.nombre}</b><hr style="margin: 4px 0;">`;
+        Object.keys(feature.properties).forEach(k => {
+          if (!k.startsWith('_') && k !== 'geom' && k !== 'geometry' && k !== 'geojson') {
+            popup += `<br><b>${k}:</b> ${escapeHTML(feature.properties[k]) ?? 'N/A'}`;
+          }
+        });
+        layer.bindPopup(popup);
+      }
     }
   });
 
+  if (capasLeaflet[capaConfig.tabla]) {
+    map.removeLayer(capasLeaflet[capaConfig.tabla]);
+  }
   capa.addTo(map);
   capasLeaflet[capaConfig.tabla] = capa;
 }
@@ -491,4 +499,110 @@ async function generarPDFReportes() {
   }
 
   doc.save('reportes_ciudadanos_' + new Date().toISOString().slice(0, 10) + '.pdf');
+}
+
+/* ==========================================================================
+   CAMBIO DE ESTADO DE REPORTES DESDE EL MAPA
+   ========================================================================== */
+function escapeHTML(texto) {
+  return String(texto ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function generarPopupReporte(feature) {
+  const p = feature.properties || {};
+  const id = escapeHTML(p.id);
+  const estadoActual = p.estado || 'pendiente';
+  const estados = ['pendiente', 'trabajando', 'completado'];
+
+  let html = `<b>Reporte #${id}</b><hr style="margin: 4px 0;">`;
+  html += `<b>Problema:</b> ${escapeHTML(p.problema)}<br>`;
+  html += `<b>Comentario:</b> ${escapeHTML(p.comentario)}<br>`;
+  if (p.lat !== undefined && p.lon !== undefined) {
+    html += `<b>Lat:</b> ${escapeHTML(p.lat)} <b>Lon:</b> ${escapeHTML(p.lon)}<br>`;
+  }
+  html += `<b>Estado:</b> <span id="estadoActual">${escapeHTML(estadoActual)}</span><br>`;
+  html += `<div class="popup-estados">`;
+  estados.forEach(e => {
+    const esActual = e === estadoActual;
+    html += `<button type="button" class="btn-estado${esActual ? ' activo' : ''}" data-id="${id}" data-estado="${e}"${esActual ? ' disabled' : ''}>${e}</button>`;
+  });
+  html += `</div>`;
+  html += `<div id="estadoMsj" class="estado-msj"></div>`;
+  return html;
+}
+
+function configurarEstadosReportes() {
+  map.on('popupopen', () => {
+    const contenedor = document.querySelector('.leaflet-popup-content');
+    if (!contenedor) return;
+
+    contenedor.querySelectorAll('.btn-estado').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        L.DomEvent.stopPropagation(e);
+        btn.disabled = true;
+
+        const id = btn.dataset.id;
+        const estado = btn.dataset.estado;
+        const estadoEl = contenedor.querySelector('#estadoActual');
+        const msj = contenedor.querySelector('#estadoMsj');
+
+        try {
+          await actualizarEstadoReporte(id, estado);
+
+          if (estadoEl) estadoEl.textContent = estado;
+          contenedor.querySelectorAll('.btn-estado').forEach(b => {
+            b.classList.remove('activo');
+            b.disabled = false;
+          });
+          btn.classList.add('activo');
+          btn.disabled = true;
+          if (msj) {
+            msj.textContent = '✓ Estado actualizado';
+            msj.className = 'estado-msj ok';
+          }
+          actualizarContadorReportes();
+        } catch (err) {
+          console.error('Error al actualizar estado:', err);
+          btn.disabled = false;
+          if (msj) {
+            msj.textContent = '✗ No se pudo actualizar';
+            msj.className = 'estado-msj error';
+          }
+        }
+      });
+    });
+  });
+}
+
+async function actualizarEstadoReporte(id, estado) {
+  const respuesta = await fetch(`${API_BASE}/reportes`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id: Number(id), estado })
+  });
+  if (!respuesta.ok) {
+    const texto = await respuesta.text();
+    throw new Error(texto || ('HTTP ' + respuesta.status));
+  }
+  return respuesta.json();
+}
+
+async function actualizarContadorReportes() {
+  const cntEl = document.getElementById('cnt-reportes_ciudadanos');
+  if (!cntEl) return;
+  try {
+    const capaConfig = CAPAS.find(c => c.tabla === 'reportes_ciudadanos');
+    const response = await fetch(`${API_BASE}/layers?tabla=reportes_ciudadanos`);
+    if (!response.ok) return;
+    const datos = await response.json();
+    const geojson = convertirAGeoJSON(datos, capaConfig);
+    cntEl.textContent = geojson.features.length;
+  } catch (err) {
+    console.error('Error actualizando contador:', err);
+  }
 }
