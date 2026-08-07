@@ -40,7 +40,7 @@ module.exports = async function handler(req, res) {
 
   if (req.method === 'GET') {
     try {
-      const resp = await fetch(`${restUrl}?select=*&order=created_at.desc&limit=500`, {
+      const resp = await fetch(`${restUrl}?select=*&limit=500`, {
         headers: {
           apikey: SUPABASE_ANON_KEY,
           Authorization: `Bearer ${SUPABASE_ANON_KEY}`

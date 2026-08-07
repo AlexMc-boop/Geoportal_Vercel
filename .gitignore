@@ -12,3 +12,7 @@ node_modules
 # Credenciales locales
 Token_git.txt
 *.token
+
+.vercel
+.env*
+!.env.example
