@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reporta un problema | Geoportal del Barrio</title>
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Tipografía -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --azul-900: #0b1f4e;
+            --azul-700: #123a8f;
+            --azul-500: #0d6efd;
+            --fondo: #eef1f6;
+            --tarjeta: #ffffff;
+            --borde: #e3e8f0;
+            --texto: #1a2333;
+            --texto-suave: #64748b;
+            --rojo: #dc2626;
+            --verde: #15803d;
+            --radio: 14px;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: var(--fondo);
+            color: var(--texto);
+            min-height: 100vh;
+        }
+
+        .topbar {
+            background: linear-gradient(120deg, var(--azul-900), var(--azul-700) 55%, var(--azul-500));
+            color: #fff;
+            padding: 16px 22px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            box-shadow: 0 4px 18px rgba(11, 31, 78, 0.35);
+        }
+
+        .brand-logo {
+            width: 44px; height: 44px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.14);
+            border: 1px solid rgba(255, 255, 255, 0.22);
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        .brand-logo svg { width: 26px; height: 26px; }
+
+        .topbar h1 { margin: 0; font-size: 19px; font-weight: 800; }
+        .topbar .subtitulo { font-size: 12.5px; opacity: 0.82; font-weight: 500; }
+
+        .contenedor {
+            max-width: 680px;
+            margin: 24px auto;
+            padding: 0 16px;
+        }
+
+        .card {
+            background: var(--tarjeta);
+            border: 1px solid var(--borde);
+            border-radius: var(--radio);
+            box-shadow: 0 8px 24px rgba(16, 24, 40, 0.08);
+            padding: 24px;
+        }
+
+        .card h2 { margin: 0 0 6px; font-size: 17px; font-weight: 800; }
+        .card .ayuda { margin: 0 0 18px; font-size: 13px; color: var(--texto-suave); }
+
+        .campo { margin-bottom: 16px; }
+
+        .campo label {
+            display: block;
+            font-size: 13px;
+            font-weight: 700;
+            margin-bottom: 6px;
+            color: var(--texto);
+        }
+
+        .campo label .req { color: var(--rojo); }
+
+        select, textarea {
+            width: 100%;
+            font-family: inherit;
+            font-size: 14px;
+            padding: 11px 12px;
+            border: 1px solid var(--borde);
+            border-radius: 10px;
+            background: #fbfcfe;
+            color: var(--texto);
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--azul-500);
+            box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.15);
+            background: #fff;
+        }
+
+        textarea { resize: vertical; min-height: 90px; }
+
+        #map {
+            width: 100%;
+            height: 340px;
+            border-radius: 12px;
+            border: 1px solid var(--borde);
+            overflow: hidden;
+            z-index: 0;
+        }
+
+        .mapa-barras {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            margin: 10px 0 4px;
+        }
+
+        .boton-ubicacion {
+            border: 1px solid var(--borde);
+            background: #f6f8fb;
+            color: var(--texto);
+            font-family: inherit;
+            font-size: 12.5px;
+            font-weight: 600;
+            padding: 8px 12px;
+            border-radius: 9px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .boton-ubicacion:hover { background: #eef1f6; }
+
+        .coords {
+            font-size: 12.5px;
+            font-weight: 600;
+            color: var(--texto-suave);
+            background: #f6f8fb;
+            border: 1px solid var(--borde);
+            padding: 8px 12px;
+            border-radius: 9px;
+        }
+
+        .basemap-switch {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            background: #eef1f6;
+            border-radius: 10px;
+            padding: 4px;
+            gap: 4px;
+            margin-bottom: 16px;
+        }
+
+        .basemap-switch button {
+            border: none;
+            background: transparent;
+            color: var(--texto-suave);
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 700;
+            padding: 8px 0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .basemap-switch button.activo {
+            background: var(--tarjeta);
+            color: var(--azul-500);
+            box-shadow: 0 1px 3px rgba(16, 24, 40, 0.12);
+        }
+
+        .boton-enviar {
+            width: 100%;
+            background: linear-gradient(120deg, var(--azul-500), var(--azul-700));
+            color: #fff;
+            border: none;
+            font-family: inherit;
+            font-size: 15px;
+            font-weight: 700;
+            padding: 13px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: opacity 0.15s ease, transform 0.1s ease;
+            margin-top: 6px;
+        }
+
+        .boton-enviar:hover { opacity: 0.92; }
+        .boton-enviar:active { transform: translateY(1px); }
+        .boton-enviar:disabled { opacity: 0.55; cursor: not-allowed; }
+
+        .aviso { display: none; margin-top: 14px; padding: 12px 14px; border-radius: 10px; font-size: 13.5px; font-weight: 600; }
+        .aviso.exito { display: block; background: #f0fdf4; border: 1px solid #bbf7d0; color: var(--verde); }
+        .aviso.error { display: block; background: #fef2f2; border: 1px solid #fecaca; color: var(--rojo); }
+
+        @media (max-width: 600px) {
+            .contenedor { margin: 12px auto; }
+            .card { padding: 18px; }
+        }
+    </style>
+</head>
+<body>
+
+<header class="topbar">
+    <div class="brand-logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
+            <circle cx="12" cy="10" r="3"/>
+        </svg>
+    </div>
+    <div>
+        <h1>Reporta un problema</h1>
+        <span class="subtitulo">Ayúdanos a mejorar la ciudad</span>
+    </div>
+</header>
+
+<div class="contenedor">
+    <div class="card">
+        <h2>Reporte de problemas urbanos</h2>
+        <p class="ayuda">Haz clic en el mapa para marcar el lugar del problema, selecciona el tipo y deja un comentario.</p>
+
+        <div class="campo">
+            <div class="basemap-switch" id="basemapSwitch">
+                <button type="button" data-basemap="satelite" class="activo">Satélite</button>
+                <button type="button" data-basemap="calles">Calles</button>
+            </div>
+            <div id="map"></div>
+            <div class="mapa-barras">
+                <button type="button" class="boton-ubicacion" id="btnUbicacion">Usar mi ubicación</button>
+                <div class="coords" id="coords">Sin ubicación seleccionada</div>
+            </div>
+        </div>
+
+        <form id="formReporte" novalidate>
+            <div class="campo">
+                <label for="problema">Tipo de problema <span class="req">*</span></label>
+                <select id="problema" name="problema" required>
+                    <option value="">Selecciona una opción…</option>
+                    <option>Baches</option>
+                    <option>Alumbrado público</option>
+                    <option>Recolección de basura</option>
+                    <option>Agua potable</option>
+                    <option>Alcantarillado</option>
+                    <option>Señalización vial</option>
+                    <option>Semáforos</option>
+                    <option>Parques y espacios públicos</option>
+                    <option>Inseguridad</option>
+                    <option>Otro</option>
+                </select>
+            </div>
+
+            <div class="campo">
+                <label for="comentario">Comentario <span class="req">*</span></label>
+                <textarea id="comentario" name="comentario" minlength="10" maxlength="500"
+                    placeholder="Describe el problema y su gravedad (mínimo 10 caracteres)…" required></textarea>
+            </div>
+
+            <button type="submit" class="boton-enviar" id="btnEnviar">Enviar reporte</button>
+        </form>
+
+        <div id="aviso" class="aviso"></div>
+    </div>
+</div>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+    // ====== Las credenciales viven en las variables de entorno del servidor (Vercel) ======
+    // El navegador solo habla con la función serverless /api/reportes
+
+    // ====== Mapa ======
+    const map = L.map('map').setView([-3.625, -78.586], 15);
+
+    const BASEMAPS = {
+        satelite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            maxZoom: 19,
+            attribution: 'Tiles &copy; Esri &mdash; Fuente: Esri, Maxar, Earthstar Geographics'
+        }),
+        calles: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; OpenStreetMap'
+        })
+    };
+
+    let basemapActual = 'satelite';
+    BASEMAPS[basemapActual].addTo(map);
+
+    document.getElementById('basemapSwitch').addEventListener('click', (e) => {
+        const btn = e.target.closest('button');
+        if (!btn || btn.dataset.basemap === basemapActual) return;
+        map.removeLayer(BASEMAPS[basemapActual]);
+        basemapActual = btn.dataset.basemap;
+        BASEMAPS[basemapActual].addTo(map);
+        document.querySelectorAll('#basemapSwitch button')
+            .forEach(b => b.classList.toggle('activo', b === btn));
+    });
+
+    // ====== Marcador de ubicación ======
+    const coordsEl = document.getElementById('coords');
+    let marcador = null;
+    let ubicacion = null;
+
+    const iconoReporte = L.divIcon({
+        className: '',
+        html: '<div style="width:26px; height:26px; background:#dc2626; border:3px solid #fff; border-radius:50% 50% 50% 0; transform:rotate(-45deg); box-shadow:0 2px 6px rgba(0,0,0,0.35);"></div><div style="width:8px; height:8px; background:#fff; border-radius:50%; position:absolute; top:9px; left:9px;"></div>',
+        iconSize: [26, 26],
+        iconAnchor: [13, 26],
+        popupAnchor: [0, -24]
+    });
+
+    function actualizarCoords(latlng) {
+        ubicacion = { lat: +latlng.lat.toFixed(6), lon: +latlng.lng.toFixed(6) };
+        coordsEl.textContent = 'Lat: ' + ubicacion.lat + '  |  Lon: ' + ubicacion.lon;
+    }
+
+    function colocarMarcador(latlng) {
+        if (!marcador) {
+            marcador = L.marker(latlng, { icon: iconoReporte, draggable: true }).addTo(map);
+            marcador.on('dragend', () => actualizarCoords(marcador.getLatLng()));
+        } else {
+            marcador.setLatLng(latlng);
+        }
+        actualizarCoords(latlng);
+    }
+
+    map.on('click', (e) => colocarMarcador(e.latlng));
+
+    document.getElementById('btnUbicacion').addEventListener('click', () => {
+        if (!navigator.geolocation) {
+            mostrarAviso('error', 'Tu navegador no soporta geolocalización.');
+            return;
+        }
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                const latlng = L.latLng(pos.coords.latitude, pos.coords.longitude);
+                map.setView(latlng, 17);
+                colocarMarcador(latlng);
+            },
+            () => mostrarAviso('error', 'No se pudo obtener tu ubicación. Marca el punto en el mapa.')
+        );
+    });
+
+    // ====== Envío del formulario ======
+    const form = document.getElementById('formReporte');
+    const btnEnviar = document.getElementById('btnEnviar');
+    const aviso = document.getElementById('aviso');
+
+    function mostrarAviso(tipo, texto) {
+        aviso.className = 'aviso ' + tipo;
+        aviso.textContent = texto;
+        aviso.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        aviso.className = 'aviso';
+
+        const problema = document.getElementById('problema').value.trim();
+        const comentario = document.getElementById('comentario').value.trim();
+
+        if (!ubicacion) {
+            mostrarAviso('error', 'Haz clic en el mapa para indicar dónde está el problema.');
+            return;
+        }
+        if (!problema) {
+            mostrarAviso('error', 'Selecciona el tipo de problema.');
+            return;
+        }
+        if (comentario.length < 10) {
+            mostrarAviso('error', 'Escribe un comentario de al menos 10 caracteres.');
+            return;
+        }
+
+        btnEnviar.disabled = true;
+        btnEnviar.textContent = 'Enviando…';
+
+        try {
+            const res = await fetch('/api/reportes', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    lat: ubicacion.lat,
+                    lon: ubicacion.lon,
+                    problema: problema,
+                    comentario: comentario
+                })
+            });
+
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+
+            form.reset();
+            if (marcador) { map.removeLayer(marcador); marcador = null; }
+            ubicacion = null;
+            coordsEl.textContent = 'Sin ubicación seleccionada';
+            mostrarAviso('exito', '¡Reporte enviado correctamente! Gracias por colaborar con tu ciudad.');
+        } catch (err) {
+            console.error(err);
+            mostrarAviso('error', 'No se pudo enviar el reporte. Verifica tu conexión e intenta de nuevo.');
+        } finally {
+            btnEnviar.disabled = false;
+            btnEnviar.textContent = 'Enviar reporte';
+        }
+    });
+</script>
+
+</body>
+</html>

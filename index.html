@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Geoportal del Barrio</title>
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Tipografía -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Estilos propios -->
+    <link rel="stylesheet" href="css/styles.css?v=4.0">
+</head>
+<body>
+
+<div class="app">
+    <header class="topbar">
+        <div class="brand">
+            <div class="brand-logo">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
+                    <circle cx="12" cy="10" r="3"/>
+                </svg>
+            </div>
+            <div>
+                <h1>Geoportal del Barrio</h1>
+                <span class="subtitulo">Visor de capas geográficas</span>
+            </div>
+        </div>
+        <div class="estado" id="estadoGlobal">
+            <span class="punto"></span>
+            <span>Cargando capas…</span>
+        </div>
+    </header>
+
+    <div class="layout">
+        <aside class="panel">
+            <section class="panel-seccion">
+                <h2>Base del mapa</h2>
+                <div class="basemap-switch" id="basemapSwitch">
+                    <button type="button" data-basemap="calles" class="activo">Calles</button>
+                    <button type="button" data-basemap="satelite">Satélite</button>
+                </div>
+            </section>
+
+            <section class="panel-seccion">
+                <h2>Capas</h2>
+                <div id="leyenda"></div>
+            </section>
+
+            <div id="statusMsg" class="msg-error"></div>
+
+            <section class="panel-seccion leyenda-final">
+                <h2>Leyenda</h2>
+                <div class="leyenda-estatica">
+                    <div class="leyenda-fila">
+                        <span class="simbolo simbolo-poligono c-zona"></span>
+                        <span class="leyenda-etiqueta">Zona Urbana</span>
+                    </div>
+                    <div class="leyenda-fila">
+                        <span class="simbolo simbolo-poligono c-mercado"></span>
+                        <span class="leyenda-etiqueta">Proyecto Mercado</span>
+                    </div>
+                    <div class="leyenda-fila">
+                        <span class="simbolo simbolo-punto c-edificios"></span>
+                        <span class="leyenda-etiqueta">Edificaciones</span>
+                    </div>
+                    <div class="leyenda-fila">
+                        <span class="simbolo simbolo-punto c-poblados"></span>
+                        <span class="leyenda-etiqueta">Poblados</span>
+                    </div>
+                    <div class="leyenda-fila">
+                        <span class="simbolo simbolo-punto c-reportes"></span>
+                        <span class="leyenda-etiqueta">Reportes ciudadanos</span>
+                    </div>
+                </div>
+            </section>
+        </aside>
+
+        <main id="map"></main>
+
+        <!-- Formulario flotante de reportes ciudadanos -->
+        <div class="flotante-reporte">
+            <div class="tarjeta-reporte" id="tarjetaReporte" hidden>
+                <div class="tarjeta-cabecera">
+                    <h3>Reportar un problema</h3>
+                    <button type="button" class="cerrar" id="btnCerrarReporte" title="Cerrar" aria-label="Cerrar">×</button>
+                </div>
+                <div class="tarjeta-cuerpo">
+                    <p class="ayuda">Haz clic en el mapa para ubicar el problema, luego completa los datos.</p>
+
+                    <div class="campo-reporte">
+                        <label>Ubicación</label>
+                        <div class="coords-reporte" id="reporteCoords">Sin ubicación seleccionada</div>
+                    </div>
+
+                    <div class="campo-reporte">
+                        <label for="reporteProblema">Problema <span class="req">*</span></label>
+                        <select id="reporteProblema" name="problema">
+                            <option value="">Selecciona una opción…</option>
+                            <option>Baches</option>
+                            <option>Alumbrado público</option>
+                            <option>Recolección de basura</option>
+                            <option>Agua potable</option>
+                            <option>Alcantarillado</option>
+                            <option>Señalización vial</option>
+                            <option>Semáforos</option>
+                            <option>Parques y espacios públicos</option>
+                            <option>Inseguridad</option>
+                            <option>Otro</option>
+                        </select>
+                    </div>
+
+                    <div class="campo-reporte">
+                        <label for="reporteComentario">Observación <span class="req">*</span></label>
+                        <textarea id="reporteComentario" name="comentario" minlength="10" maxlength="500"
+                            placeholder="Describe el problema (mínimo 10 caracteres)…"></textarea>
+                    </div>
+
+                    <button type="button" class="boton-enviar" id="btnEnviarReporte">Enviar reporte</button>
+                    <div id="reporteAviso" class="aviso"></div>
+                </div>
+            </div>
+
+            <button type="button" class="fab" id="btnAbrirReporte" title="Reportar un problema">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
+                    <circle cx="12" cy="10" r="3"/>
+                </svg>
+                <span>Reportar</span>
+            </button>
+        </div>
+    </div>
+
+    <footer class="creditos">
+        <span>UTPL 2026, Especialidad SIG</span>
+    </footer>
+</div>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- proj4 para reproyección de coordenadas -->
+<script src="https://unpkg.com/proj4@2.11.0/dist/proj4.js"></script>
+<!-- Lógica del geoportal -->
+<script src="js/app.js?v=5.0"></script>
+
+</body>
+</html>
