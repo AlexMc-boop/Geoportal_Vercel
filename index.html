@@ -12,7 +12,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- Estilos propios -->
-    <link rel="stylesheet" href="css/styles.css?v=6.0">
+    <link rel="stylesheet" href="css/styles.css?v=6.1">
 </head>
 <body>
 
@@ -90,6 +90,19 @@
                     <span>Generar PDF</span>
                 </button>
             </section>
+
+            <section class="panel-seccion">
+                <h2>Estadísticas</h2>
+                <button type="button" class="btn-pdf" id="btnGenerarGrafico" title="Gráfico de barras de la capa de poblados">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="20" x2="18" y2="10"/>
+                        <line x1="12" y1="20" x2="12" y2="4"/>
+                        <line x1="6" y1="20" x2="6" y2="14"/>
+                        <line x1="3" y1="20" x2="21" y2="20"/>
+                    </svg>
+                    <span>Gráfico de Poblados</span>
+                </button>
+            </section>
         </aside>
 
         <main id="map"></main>
@@ -147,6 +160,22 @@
         </div>
     </div>
 
+    <!-- Modal de gráfico de poblados -->
+    <div class="modal-overlay" id="modalGrafico" hidden>
+        <div class="modal-card">
+            <div class="modal-cabecera">
+                <h3>Poblados por categoría</h3>
+                <button type="button" class="cerrar-modal" id="btnCerrarGrafico" title="Cerrar" aria-label="Cerrar">×</button>
+            </div>
+            <div class="modal-cuerpo">
+                <canvas id="canvasGrafico" height="300"></canvas>
+            </div>
+            <div class="modal-pie">
+                <button type="button" class="btn-descargar" id="btnDescargarGrafico">Descargar imagen (PNG)</button>
+            </div>
+        </div>
+    </div>
+
     <footer class="creditos">
         <span>UTPL 2026, Especialidad SIG</span>
     </footer>
@@ -158,8 +187,10 @@
 <script src="https://unpkg.com/proj4@2.11.0/dist/proj4.js"></script>
 <!-- jsPDF para exportar reportes a PDF -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<!-- Chart.js para gráficos estadísticos -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <!-- Lógica del geoportal -->
-<script src="js/app.js?v=8.0"></script>
+<script src="js/app.js?v=8.1"></script>
 
 </body>
 </html>

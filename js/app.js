@@ -77,6 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
   configurarEventosReporte();
   configurarEstadosReportes();
   configurarBotonPDF();
+  configurarBotonGrafico();
 });
 
 function inicializarMapa() {
@@ -612,4 +613,110 @@ async function actualizarContadorReportes() {
   } catch (err) {
     console.error('Error actualizando contador:', err);
   }
+}
+
+/* ==========================================================================
+   GRÁFICO DE POBLADOS
+   ========================================================================== */
+function configurarBotonGrafico() {
+  const btn = document.getElementById('btnGenerarGrafico');
+  const cerrar = document.getElementById('btnCerrarGrafico');
+  const descargar = document.getElementById('btnDescargarGrafico');
+  const modal = document.getElementById('modalGrafico');
+  if (!btn || !modal) return;
+
+  const etiqueta = btn.querySelector('span');
+
+  btn.addEventListener('click', async () => {
+    if (btn.disabled) return;
+    btn.disabled = true;
+    if (etiqueta) etiqueta.textContent = 'Cargando…';
+
+    try {
+      await abrirGraficoPoblados();
+    } catch (err) {
+      console.error('Error generando gráfico:', err);
+      alert('No se pudo generar el gráfico. Intenta de nuevo.');
+    } finally {
+      btn.disabled = false;
+      if (etiqueta) etiqueta.textContent = 'Gráfico de Poblados';
+    }
+  });
+
+  if (cerrar) cerrar.addEventListener('click', () => { modal.hidden = true; });
+  modal.addEventListener('click', (event) => {
+    if (event.target === modal) modal.hidden = true;
+  });
+  if (descargar) descargar.addEventListener('click', descargarGrafico);
+}
+
+async function abrirGraficoPoblados() {
+  const modal = document.getElementById('modalGrafico');
+  const canvas = document.getElementById('canvasGrafico');
+  if (!modal || !canvas) return;
+
+  modal.hidden = false;
+
+  const respuesta = await fetch(`${API_BASE}/layers?tabla=poblado_p`);
+  if (!respuesta.ok) throw new Error('HTTP ' + respuesta.status);
+  const datos = await respuesta.json();
+  const lista = Array.isArray(datos) ? datos : [];
+
+  const conteo = {};
+  lista.forEach((p) => {
+    const clave = (p.txt && String(p.txt).trim()) || 'Sin categoría';
+    conteo[clave] = (conteo[clave] || 0) + 1;
+  });
+
+  const etiquetas = Object.keys(conteo).sort((a, b) => conteo[b] - conteo[a]);
+  const valores = etiquetas.map((k) => conteo[k]);
+
+  if (window.graficoPoblados) window.graficoPoblados.destroy();
+  window.graficoPoblados = new Chart(canvas.getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: etiquetas,
+      datasets: [{
+        label: 'Número de poblados',
+        data: valores,
+        backgroundColor: 'rgba(13, 110, 253, 0.85)',
+        borderColor: '#123a8f',
+        borderWidth: 1.5,
+        borderRadius: 6,
+        maxBarThickness: 90
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => ` ${ctx.parsed.y} poblado(s)`
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: { precision: 0 },
+          title: { display: true, text: 'Cantidad' }
+        },
+        x: {
+          ticks: { autoSkip: false },
+          title: { display: true, text: 'Categoría' }
+        }
+      }
+    }
+  });
+}
+
+function descargarGrafico() {
+  const canvas = document.getElementById('canvasGrafico');
+  if (!canvas) return;
+  const enlace = document.createElement('a');
+  enlace.download = `grafico_poblados_${new Date().toISOString().slice(0, 10)}.png`;
+  enlace.href = canvas.toDataURL('image/png');
+  enlace.click();
 }
