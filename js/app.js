@@ -54,6 +54,61 @@ const CAPAS = [
     tipo: 'punto',
     srid: 4326,
     color: '#f39c12'
+  },
+  {
+    tabla: 'Comunidades',
+    nombre: 'Comunidades',
+    tipo: 'poligono',
+    srid: 4326,
+    color: '#9b59b6',
+    fillOpacity: 0.3
+  },
+  {
+    tabla: 'Edificios',
+    nombre: 'Edificios',
+    tipo: 'poligono',
+    srid: 4326,
+    color: '#16a085',
+    fillOpacity: 0.35
+  },
+  {
+    tabla: 'Mirador',
+    nombre: 'Mirador',
+    tipo: 'poligono',
+    srid: 4326,
+    color: '#e67e22',
+    fillOpacity: 0.35
+  },
+  {
+    tabla: 'P_LaBoa',
+    nombre: 'P. La Boa',
+    tipo: 'poligono',
+    srid: 4326,
+    color: '#34495e',
+    fillOpacity: 0.3
+  },
+  {
+    tabla: 'ZonaUrbana',
+    nombre: 'Zona Urbana 1',
+    tipo: 'poligono',
+    srid: 4326,
+    color: '#27ae60',
+    fillOpacity: 0.3
+  },
+  {
+    tabla: 'ZonaUrbana2',
+    nombre: 'Zona Urbana 2',
+    tipo: 'poligono',
+    srid: 4326,
+    color: '#d35400',
+    fillOpacity: 0.3
+  },
+  {
+    tabla: 'comunidad_p',
+    nombre: 'Comunidades (puntos)',
+    tipo: 'punto',
+    srid: 32717,
+    color: '#8e44ad'
   }
 ];
 

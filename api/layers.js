@@ -12,7 +12,14 @@ const TABLAS_PERMITIDAS = [
   'Proyecto_Mercado1',
   'edificio_p',
   'poblado_p',
-  'reportes_ciudadanos'
+  'reportes_ciudadanos',
+  'Comunidades',
+  'Edificios',
+  'Mirador',
+  'P_LaBoa',
+  'ZonaUrbana',
+  'ZonaUrbana2',
+  'comunidad_p'
 ];
 
 module.exports = async function handler(req, res) {
