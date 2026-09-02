@@ -140,7 +140,8 @@ module.exports = async function handler(req, res) {
       console.error('Error guardando reporte:', err);
       res.status(502).json({
         error: 'Error al guardar el reporte',
-        detalle: String((err && err.message) || err)
+        detalle: String((err && err.message) || err),
+        stack: String((err && err.stack) || '')
       });
     }
     return;
