@@ -9,19 +9,51 @@ const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
 
 const TABLA = 'reportes_ciudadanos';
-const CAMPOS_PERMITIDOS = [
-  'problema',
-  'comentario',
-  'lat',
-  'lon',
-  'titulo',
-  'descripcion',
-  'x',
-  'y',
-  'latitude',
-  'longitude'
-];
-const ESTADOS_VALIDOS = ['pendiente', 'trabajando', 'completado'];
+const ESTADOS_VALIDOS = ['pendiente', 'en_revision', 'atendido', 'cerrado', 'trabajando', 'completado'];
+
+function interpretarBody(raw) {
+  if (!raw) return {};
+  if (typeof raw === 'object' && !Array.isArray(raw)) return raw;
+  if (typeof raw === 'string') {
+    try {
+      return JSON.parse(raw);
+    } catch (e) {
+      return {};
+    }
+  }
+  return {};
+}
+
+function numero(v) {
+  if (v === undefined || v === null || v === '') return undefined;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : undefined;
+}
+
+// Normaliza los campos (acepta el esquema moderno problema/comentario/lat/lon
+// y el heredado titulo/descripcion/latitude/longitude/x/y) hacia el canónico.
+function normalizarReporte(body) {
+  const reporte = {
+    problema: String(body.problema || body.titulo || '').trim(),
+    comentario: String(body.comentario ?? body.descripcion ?? '').trim()
+  };
+  const lat = numero(body.lat ?? body.latitude);
+  const lon = numero(body.lon ?? body.longitude);
+  if (lat !== undefined && lon !== undefined) {
+    reporte.lat = lat;
+    reporte.lon = lon;
+  }
+  return reporte;
+}
+
+function extraerCodigoError(texto) {
+  try {
+    const obj = JSON.parse(texto);
+    return obj && obj.code ? String(obj.code) : null;
+  } catch (e) {
+    return null;
+  }
+}
 
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -58,14 +90,19 @@ module.exports = async function handler(req, res) {
 
   if (req.method === 'POST') {
     try {
-      const body = (typeof req.body === 'object' && req.body) ? req.body : {};
-      const campos = {};
-      for (const k of Object.keys(body)) {
-        if (CAMPOS_PERMITIDOS.includes(k)) campos[k] = body[k];
-      }
+      const body = interpretarBody(req.body);
+      const reporte = normalizarReporte(body);
 
-      if (Object.keys(campos).length === 0) {
-        res.status(400).json({ error: 'Cuerpo de la solicitud vacío o inválido' });
+      if (!reporte.problema) {
+        res.status(400).json({ error: 'Debes indicar el problema.' });
+        return;
+      }
+      if (!reporte.comentario || reporte.comentario.length < 10) {
+        res.status(400).json({ error: 'La observación debe tener al menos 10 caracteres.' });
+        return;
+      }
+      if (reporte.lat === undefined || reporte.lon === undefined) {
+        res.status(400).json({ error: 'Haz clic en el mapa para ubicar el problema.' });
         return;
       }
 
@@ -77,19 +114,34 @@ module.exports = async function handler(req, res) {
           'Content-Type': 'application/json',
           Prefer: 'return=minimal'
         },
-        body: JSON.stringify(campos)
+        body: JSON.stringify(reporte)
       });
 
       if (resp.ok) {
         res.status(201).json({ ok: true });
-      } else {
-        const texto = await resp.text();
-        console.error('Supabase rechazó el reporte:', texto);
-        res.status(resp.status).json({ error: texto });
+        return;
       }
+
+      const texto = await resp.text();
+      const codigo = extraerCodigoError(texto);
+
+      if (codigo === 'PGRST204') {
+        // La tabla aún no tiene alguna columna del esquema canónico:
+        // se informa el error real para guiar la corrección (sql/fix_reportes_ciudadanos.sql).
+        res.status(409).json({
+          error: 'La tabla reportes_ciudadanos no tiene el esquema esperado. Ejecuta sql/fix_reportes_ciudadanos.sql en Supabase.',
+          detalle: texto
+        });
+        return;
+      }
+
+      res.status(resp.status).json({ error: texto || 'Supabase rechazó el reporte.' });
     } catch (err) {
       console.error('Error guardando reporte:', err);
-      res.status(502).json({ error: 'Error al guardar el reporte' });
+      res.status(502).json({
+        error: 'Error al guardar el reporte',
+        detalle: String((err && err.message) || err)
+      });
     }
     return;
   }

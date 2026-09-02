@@ -429,7 +429,14 @@ function configurarEventosReporte() {
 
         cargarCapas();
       } else {
-        mostrarAviso(aviso, 'Error al guardar el reporte.', 'error');
+        let msg = 'Error al guardar el reporte.';
+        try {
+          const datos = await response.json();
+          if (datos && datos.error) {
+            msg = `Error al guardar el reporte: ${datos.error}`;
+          }
+        } catch (e) { /* sin body JSON */ }
+        mostrarAviso(aviso, msg, 'error');
       }
     } catch (err) {
       console.error(err);
